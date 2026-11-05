@@ -1,0 +1,438 @@
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #1b4332; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        .panel-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 30, 22, 0.96); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        .panel-overlay h1 { font-size: 2.8rem; margin-bottom: 10px; color: #52b788; }
+        .panel-overlay h2 { font-size: 2rem; margin-bottom: 15px; color: #52b788; }
+        .panel-overlay p { font-size: 1.1rem; margin-bottom: 25px; color: #d8f3dc; }
+        .panel-btn { background: #2d6a4f; color: white; border: none; padding: 12px 25px; margin: 8px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s; min-width: 280px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .panel-btn:hover { background: #40916c; transform: translateY(-2px); }
+
+        .lobby-group { margin-bottom: 15px; text-align: left; width: 300px; }
+        .lobby-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #b7e4c7; }
+        .lobby-group input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #52b788; background: #081c15; color: white; font-size: 1.1rem; text-align: center; }
+
+        .seat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; width: 300px; }
+        .seat-btn { padding: 12px; background: #1b4332; color: #d8f3dc; border: 2px solid #2d6a4f; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s ease; }
+        .seat-btn.selected { background: #52b788 !important; border-color: #ffffff !important; color: #081c15 !important; font-weight: 900; box-shadow: 0 0 12px #52b788; transform: scale(1.03); }
+        .seat-btn.occupied { background: #374151 !important; border-color: #4b5563 !important; color: #9ca3af !important; cursor: not-allowed; opacity: 0.7; }
+
+        #game-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+        #status-bar { background: #081c15; color: #d8f3dc; padding: 10px; text-align: center; font-size: 1.05rem; border-bottom: 2px solid #2d6a4f; font-weight: bold; min-height: 42px; }
+        .main-layout { display: flex; flex: 1; height: calc(100vh - 42px); overflow: hidden; }
+
+        .left-panel, .right-panel { width: 280px; min-width: 260px; background: #0f2e21; border-right: 2px solid #2d6a4f; display: flex; flex-direction: column; padding: 10px; gap: 10px; overflow-y: auto; }
+        .right-panel { border-right: none; border-left: 2px solid #2d6a4f; }
+        .side-box { background: #1b4332; border: 1px solid #2d6a4f; border-radius: 8px; padding: 10px; font-size: 0.9rem; color: #d8f3dc; }
+        .side-box h3 { margin-bottom: 8px; color: #52b788; font-size: 0.95rem; border-bottom: 1px solid #2d6a4f; padding-bottom: 4px; }
+
+        .action-buttons-vertical button { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        .btn-primary { background: #2d6a4f; color: white; }
+        .btn-info { background: #1d3557; color: white; }
+        .btn-warning { background: #b57c0a; color: white; }
+        .btn-danger { background: #9b2226; color: white; }
+
+        .center-panel { flex: 1; display: flex; flex-direction: column; position: relative; background: radial-gradient(circle, #2d6a4f 0%, #1b4332 100%); overflow: hidden; }
+        .table-grid { display: grid; grid-template-rows: 170px 1fr 140px; grid-template-columns: 200px 1fr 200px; height: 100%; width: 100%; padding: 8px; position: relative; align-items: center; }
+
+        .hand { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; width: 100%; height: 100%; }
+        #hand-top { grid-row: 1; grid-column: 2; z-index: 10; justify-content: flex-start; }
+        #hand-left { grid-row: 2; grid-column: 1; flex-direction: row; gap: 8px; align-items: center; justify-content: flex-start; }
+        #hand-right { grid-row: 2; grid-column: 3; flex-direction: row-reverse; gap: 8px; align-items: center; justify-content: flex-end; }
+        #hand-bottom { grid-row: 3; grid-column: 2; }
+
+        .cards-container { display: flex; position: relative; align-items: center; justify-content: center; width: 100%; }
+        #cards-top, #cards-bottom { height: 100px; }
+        #cards-top .card, #cards-bottom .card { margin-left: -30px; }
+        #cards-top .card:first-child, #cards-bottom .card:first-child { margin-left: 0; }
+
+        /* Disposizione Carte del Morto (4 colonne ordinate per seme) */
+        .dummy-container { display: flex !important; flex-direction: row !important; justify-content: center !important; gap: 12px !important; height: auto !important; }
+        .dummy-suit-col { display: flex; flex-direction: column; width: 64px; align-items: center; }
+        .dummy-suit-col .card { margin-top: -68px; margin-left: 0 !important; }
+        .dummy-suit-col .card:first-child { margin-top: 0; }
+
+        .vertical-stack { flex-direction: column; height: 100%; max-height: 360px; justify-content: center; width: auto; }
+        .vertical-stack .card { margin-top: -66px; margin-left: 0 !important; }
+        .vertical-stack .card:first-child { margin-top: 0; }
+
+        .player-label { background: rgba(8, 28, 21, 0.9); padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; margin: 3px 0; border: 1px solid #52b788; z-index: 50; white-space: nowrap; text-align: center; color: #52b788; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+        /* Grafica Carte */
+        .card { background: #ffffff; color: #212529; width: 64px; height: 92px; border-radius: 6px; border: 1px solid #adb5bd; position: relative; cursor: pointer; box-shadow: 2px 3px 6px rgba(0,0,0,0.4); user-select: none; transition: transform 0.15s ease, z-index 0.15s ease; flex-shrink: 0; }
+        .card:hover { transform: translateY(-10px) scale(1.08); z-index: 100 !important; }
+        .card-clickable { border: 2px solid #52b788 !important; box-shadow: 0 0 8px #52b788; }
+        
+        /* Valore e Seme in Alto a Sinistra */
+        .card-corner { position: absolute; top: 3px; left: 4px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+        .card-val { font-size: 15px; font-weight: 800; }
+        .card-suit-sm { font-size: 12px; margin-top: 1px; }
+        
+        /* Simbolo Centrale */
+        .card-suit-center { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); font-size: 26px; line-height: 1; }
+        
+        /* Angolo Basso Destra (Rotato) */
+        .card-corner-bottom { top: auto; left: auto; bottom: 3px; right: 4px; transform: rotate(180deg); }
+
+        .suit-red { color: #d90429 !important; }
+        .suit-black { color: #111827 !important; }
+        .card-back { background: linear-gradient(135deg, #1d3557 0%, #457b9d 100%) !important; border: 2px solid #f1faee !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+        .card-back-pattern { font-size: 32px; color: rgba(255,255,255,0.4); }
+
+        .center-area { grid-row: 2; grid-column: 2; display: flex; align-items: center; justify-content: center; position: relative; width: 100%; height: 100%; }
+        .center-logo { font-size: 2.2rem; color: rgba(255,255,255,0.12); letter-spacing: 12px; font-weight: bold; }
+
+        .trick-area { position: absolute; width: 230px; height: 230px; display: grid; grid-template-rows: 1fr 1fr 1fr; grid-template-columns: 1fr 1fr 1fr; align-items: center; justify-items: center; }
+        #trick-top { grid-row: 1; grid-column: 2; }
+        #trick-left { grid-row: 2; grid-column: 1; }
+        #trick-right { grid-row: 2; grid-column: 3; }
+        #trick-bottom { grid-row: 3; grid-column: 2; }
+        .trick-card-slot { width: 64px; height: 92px; display: flex; align-items: center; justify-content: center; }
+
+        /* Quadro Licite Tabellare Perfetto (O | N | E | S) */
+        .history-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #081c15; padding: 6px; border-radius: 6px; max-height: 180px; overflow-y: auto; text-align: center; font-size: 0.85rem; border: 1px solid #2d6a4f; }
+        .history-header { background: #2d6a4f; font-weight: bold; padding: 5px 2px; color: #d8f3dc; border-radius: 3px; position: sticky; top: 0; z-index: 10; }
+        .history-cell { background: #1b4332; padding: 5px 2px; border-radius: 3px; font-weight: bold; color: #ffffff; min-height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.88rem; }
+        .cell-dash { color: #6b7280; font-weight: normal; }
+
+        /* Bidding Box Compatto */
+        .bidding-matrix { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 8px; }
+        .bid-cell-btn { border: none; padding: 7px 1px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: filter 0.15s, opacity 0.15s; }
+        .bid-cell-btn:hover:not(:disabled) { filter: brightness(1.25); transform: scale(1.02); }
+
+        .strain-clubs { background-color: #1e5631; }
+        .strain-diamonds { background-color: #b45309; }
+        .strain-hearts { background-color: #991b1b; }
+        .strain-spades { background-color: #1e3a8a; }
+        .strain-nt { background-color: #374151; }
+
+        .special-bids-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; }
+        .special-btn { padding: 8px 2px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .btn-alert { background: #d97706; grid-column: span 3; }
+        .btn-double { background: #b91c1c; }
+        .btn-redouble { background: #7c2d12; }
+        .btn-pass-stylish { background: #047857; }
+        .btn-undo-bid { background: #4b5563; grid-column: span 3; padding: 6px; margin-top: 2px; }
+
+        #results-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; }
+        .results-content { background: #1b4332; border: 2px solid #52b788; padding: 20px; border-radius: 10px; width: 85%; max-width: 900px; max-height: 90vh; overflow-y: auto; color: white; }
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .results-table th, .results-table td { border: 1px solid #2d6a4f; padding: 8px; text-align: center; }
+        .results-table th { background: #081c15; color: #52b788; }
+        .close-results { margin-top: 15px; background: #c0392b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+
+/* Aggiornamento tavolo: superficie porpora e area utile più compatta, carte invariate */
+.center-panel { background: radial-gradient(circle, #92278f 0%, #54164f 100%) !important; }
+.table-grid { width: 90%; height: 90%; margin: auto; padding: 4px; grid-template-rows: 170px minmax(0, 1fr) 140px; grid-template-columns: minmax(135px, 180px) minmax(0, 1fr) minmax(135px, 180px); }
+.pin-entry-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.pin-entry-row label { flex: 1; margin: 0; text-align: left; font-weight: 700; color: #f3d9f2; }
+.pin-entry-row input { width: 135px; flex: 0 0 135px; }
+.horizontal-suit-groups { display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 0; width: 100%; height: auto !important; min-height: 180px; overflow: visible; }
+.horizontal-suit-row { display: flex; flex-direction: row; align-items: center; justify-content: center; width: max-content; max-width: 100%; height: 35px; position: relative; }
+.horizontal-suit-row .card { margin-left: -43px; }
+.horizontal-suit-row .card:first-child { margin-left: 0; }
+#cards-top.horizontal-suit-groups .horizontal-suit-row { transform-origin: center top; }
+#cards-bottom.horizontal-suit-groups .horizontal-suit-row { transform-origin: center bottom; }
+#cards-top.horizontal-suit-groups { margin-bottom: -10px; }
+#cards-bottom.horizontal-suit-groups { margin-top: -8px; }
+@media (max-width: 1100px) { .table-grid { width: 94%; grid-template-columns: minmax(95px, 135px) minmax(0,1fr) minmax(95px,135px); } .horizontal-suit-row .card { margin-left: -46px; } }
+
+
+/* Mani scoperte: raggruppamento per seme senza ridimensionare le carte */
+.exposed-horizontal-hand { display:flex !important; flex-direction:row !important; align-items:center; justify-content:center; gap:5px; height:auto !important; min-height:170px; overflow:visible; }
+.exposed-suit-column { display:flex; flex-direction:column; align-items:center; width:64px; min-width:64px; }
+.exposed-suit-column .card { margin-top:-66px; margin-left:0 !important; }
+.exposed-suit-column .card:first-child { margin-top:0; }
+.exposed-vertical-hand { display:flex !important; flex-direction:column !important; align-items:center; justify-content:center; gap:10px; height:auto !important; width:100% !important; max-height:none !important; overflow:visible; padding-top:6px; padding-bottom:6px; }
+.exposed-vertical-suit-row { display:flex; flex-direction:row; align-items:center; justify-content:center; height:64px; min-height:64px; position:relative; flex-shrink:0; }
+.exposed-vertical-suit-row .card { transform:rotate(90deg); transform-origin:center center; margin-left:-38px !important; }
+.exposed-vertical-suit-row .card:first-child { margin-left:0 !important; }
+.faces-left .exposed-vertical-suit-row .card { transform:rotate(90deg); transform-origin:center center; }
+.faces-left .exposed-vertical-suit-row .card:hover { transform:rotate(90deg) translateY(-5px) scale(1.05); }
+.faces-right .exposed-vertical-suit-row .card { transform:rotate(-90deg); transform-origin:center center; }
+.faces-right .exposed-vertical-suit-row .card:hover { transform:rotate(-90deg) translateY(-5px) scale(1.05); }
+.mirror-suit-order .exposed-vertical-suit-row { flex-direction:row-reverse; }
+
+
+/* Rifinitura orientamento e nomi dei giocatori */
+#hand-bottom .player-label { margin-bottom: 9px; transform: translateY(-4px); }
+#hand-left .player-label { transform: translateX(-12px); }
+#hand-right .player-label { transform: translateX(12px); }
+
+/* Etichette dei giocatori riposizionate solo quando le mani sono scoperte */
+#hand-top:has(#cards-top.exposed-horizontal-hand),
+#hand-bottom:has(#cards-bottom.exposed-horizontal-hand) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+#hand-top:has(#cards-top.exposed-horizontal-hand) .player-label,
+#hand-bottom:has(#cards-bottom.exposed-horizontal-hand) .player-label {
+    order: 2;
+    margin: 0;
+    transform: none;
+    flex-shrink: 0;
+}
+#hand-top:has(#cards-top.exposed-horizontal-hand) .cards-container,
+#hand-bottom:has(#cards-bottom.exposed-horizontal-hand) .cards-container {
+    order: 1;
+    width: auto;
+    flex: 0 1 auto;
+}
+#hand-left:has(#cards-left.exposed-vertical-hand),
+#hand-right:has(#cards-right.exposed-vertical-hand) {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+#hand-left:has(#cards-left.exposed-vertical-hand) .cards-container,
+#hand-right:has(#cards-right.exposed-vertical-hand) .cards-container {
+    order: 1;
+}
+#hand-left:has(#cards-left.exposed-vertical-hand) .player-label,
+#hand-right:has(#cards-right.exposed-vertical-hand) .player-label {
+    order: 2;
+    margin: 0;
+    transform: none;
+    flex-shrink: 0;
+}
+
+/* ===================== TORNEI ===================== */
+.tournaments-page{position:fixed;inset:0;background:#87ceeb;display:flex;align-items:flex-start;justify-content:center;overflow:auto;z-index:1000;padding:30px 16px;box-sizing:border-box;color:#17324d}
+.tournaments-shell{width:min(920px,96vw);background:rgba(255,255,255,.94);border-radius:18px;box-shadow:0 12px 36px rgba(0,0,0,.22);padding:26px;box-sizing:border-box;min-height:calc(100vh - 60px)}
+.tournaments-shell h1{text-align:center;margin:0 0 24px;font-size:2rem}.tournaments-shell h2{margin-top:0}
+.tournament-actions,.tournament-role-choice{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}.tournament-main-btn{min-width:260px}
+.tournament-form{max-width:620px;margin:20px auto;padding:20px;border-radius:14px;background:#eef8fd;border:1px solid #b9dced;box-sizing:border-box}
+.tournament-form label{display:block;font-weight:700;margin:12px 0 6px}.tournament-form input,.tournament-form select{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #9fc4d8;border-radius:8px;font-size:1rem;background:white;color:#17324d}
+.referee-line{display:flex;align-items:center;gap:14px;margin:10px 0 16px;font-size:.9rem}.referee-line span{font-weight:700;margin-right:4px}.referee-line label{display:flex;align-items:center;gap:4px;margin:0;font-weight:600}.referee-line input{width:auto}
+.compact-btn{min-width:180px!important;margin-top:10px}.t-seat-buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.t-seat-btn{padding:10px;border:1px solid #7daec5;border-radius:8px;background:#fff;cursor:pointer;font-weight:700;color:#17324d}.t-seat-btn.selected{background:#3498db;color:#fff}.t-seat-btn.occupied{background:#d5dde2;color:#5b6770;cursor:not-allowed}
+.tournament-status{margin-top:14px;padding:10px;border-radius:8px;background:#dff0d8;color:#315d25;font-weight:700}.tournament-status.active{background:#c8f7d2;color:#145b2a}.tournament-team-players{margin-top:12px;display:grid;gap:6px}.t-occupied-player{padding:8px 10px;background:#fff;border:1px solid #c6dbe5;border-radius:7px}.tournament-back-btn{display:block;margin:22px auto 0;background:transparent;border:0;text-decoration:underline;cursor:pointer;color:#28536a}
+@media(max-width:600px){.tournament-form{padding:14px}.tournament-main-btn{min-width:100%}.tournaments-shell{padding:18px}.tournaments-page{padding:12px}.t-seat-buttons{grid-template-columns:1fr 1fr}}
+
+/* Tornei a squadre - fase 2 */
+.tournament-match-panel{margin-top:18px;padding:16px;background:rgba(255,255,255,.72);border-radius:12px;color:#183b56}
+.tournament-match-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tournament-room-card{background:#fff;border:1px solid #b7d4e8;border-radius:10px;padding:12px}
+.tournament-room-card h3{margin:0 0 8px}
+.tournament-room-card ul{margin:6px 0;padding-left:22px}
+.tournament-score-entry{margin-top:14px;padding-top:12px;border-top:1px solid #c9dce8}
+.tournament-score-row{display:grid;grid-template-columns:60px 1fr 1fr 80px;gap:7px;align-items:center;margin:6px 0}
+.tournament-score-row input{width:100%;box-sizing:border-box}
+.tournament-final-result{position:fixed;left:14px;bottom:14px;background:#fff;color:#12324a;border:2px solid #2d6a8f;border-radius:10px;padding:12px 16px;box-shadow:0 4px 18px rgba(0,0,0,.18);z-index:9999;min-width:250px}
+.tournament-final-result strong{font-size:1.15rem}
+.tournament-hidden{display:none!important}
+@media(max-width:900px){.tournament-match-grid{grid-template-columns:1fr}.tournament-score-row{grid-template-columns:48px 1fr 1fr 70px}}
+.tournament-help{font-size:.82rem;opacity:.82;line-height:1.35}
+.tournament-round-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0;padding:10px 12px;background:#e6f5fb;border:1px solid #b7d4e8;border-radius:10px}.tournament-round-title{font-size:1.05rem}.tournament-pairings{display:grid;gap:12px;margin-top:12px}.tournament-pairing-card{background:#fff;border:1px solid #b7d4e8;border-radius:12px;padding:14px}.pairing-head{margin-bottom:6px}.tournament-room-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.tournament-room-mini>div{background:#f4fbfe;border-radius:8px;padding:9px;border:1px solid #d4e8f1}.pairing-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.btn-score-open{background:#2878a7!important;color:#fff!important}.tournament-standings,.tournament-round-results{margin-top:16px;padding:14px;background:#fff;border:1px solid #b7d4e8;border-radius:12px}.tournament-standings h3,.tournament-round-results h3{margin-top:0}.tournament-standings-table{width:100%;border-collapse:collapse}.tournament-standings-table th,.tournament-standings-table td{padding:7px 8px;border-bottom:1px solid #d9e8ef;text-align:left}.tournament-standings-table th{background:#eef8fd}.tournament-score-modal{position:fixed;inset:0;background:rgba(10,35,50,.58);display:flex;align-items:center;justify-content:center;z-index:12000;padding:18px;box-sizing:border-box}.tournament-score-modal-content{background:#fff;color:#17324d;border-radius:14px;max-width:900px;width:min(900px,96vw);max-height:90vh;overflow:auto;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.3)}.tournament-score-detail{width:100%;border-collapse:collapse;margin:12px 0 16px}.tournament-score-detail th,.tournament-score-detail td{padding:7px 8px;border:1px solid #c8dce6;text-align:center}.tournament-score-detail th{background:#eef8fd}.tournament-hidden{display:none!important}
+@media(max-width:600px){.tournament-room-mini{grid-template-columns:1fr}.pairing-actions .panel-btn{min-width:100%}.tournament-score-row{grid-template-columns:42px 1fr 1fr 55px}}
+
+.mitchel-pair-card{padding:9px 10px;background:#fff;border:1px solid #c6dbe5;border-radius:7px}.mitchel-pair-card strong{display:inline-block;min-width:60px}.mitchel-bye{background:#fff8dc!important;border-color:#e0c35a!important}.mitchel-board-grid{display:grid;grid-template-columns:60px 1fr 80px;gap:7px;align-items:center;margin:6px 0}.mitchel-board-grid input{width:100%;box-sizing:border-box}.mitchel-score-detail th,.mitchel-score-detail td{padding:7px 8px;border:1px solid #c8dce6;text-align:center}.mitchel-score-detail{width:100%;border-collapse:collapse;margin:12px 0 16px}.mitchel-score-detail th{background:#eef8fd}
+/* Fase arbitri torneo */
+.tournament-arbiter-panel,.tournament-voice-panel{margin:12px 0;padding:10px;border-radius:10px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.12)}
+.arbiter-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.arbiter-presence,.arbiter-call{display:inline-block;padding:5px 9px;border-radius:8px;font-size:.9em;font-weight:600}
+.arbiter-presence{background:#e5f1ff;color:#174a7c}
+.arbiter-call{background:#fff0b8;color:#684f00;animation:arbiterPulse 1.2s infinite alternate}
+@keyframes arbiterPulse{from{opacity:.72}to{opacity:1}}
+.tournament-voice-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* Accesso provvisorio con Nick Name */
+.protected-entry-note{
+    width:min(92vw,420px);
+    margin:14px auto 8px;
+    text-align:center;
+    color:#e8eef5;
+    font-size:0.95rem;
+    line-height:1.35;
+}
+.protected-entry-btn{background:#1976d2 !important;color:#fff !important;}
+.nickname-access-page,.protected-menu-page{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#10243a,#173c5f);padding:20px;box-sizing:border-box;
+}
+.access-card{
+    width:min(92vw,460px);background:rgba(15,25,38,.96);border-radius:18px;
+    padding:30px;box-shadow:0 14px 40px rgba(0,0,0,.35);text-align:center;color:#fff;
+}
+.access-card h1{margin-top:0}.access-card input{width:100%;box-sizing:border-box;padding:12px;border-radius:8px;border:1px solid #718096;font-size:1rem;margin:10px 0 16px;background:#fff;color:#111}
+.access-card .panel-btn{background:#1976d2 !important;color:#fff !important;width:100%;margin:7px 0}
+.access-card .back-link{display:inline-block;margin-top:14px;color:#b9d9ff;cursor:pointer;text-decoration:underline}
+.protected-menu-buttons{display:flex;flex-direction:column;gap:10px}
+.protected-menu-buttons .panel-btn{background:#1976d2 !important;color:#fff !important}
+.access-nick{font-weight:bold;color:#8fd3ff}
+
+
+/* Posizionamento definitivo delle etichette cardinali: sempre fuori dall'area delle carte. */
+#hand-top, #hand-bottom, #hand-left, #hand-right { position: relative; }
+
+#hand-top .player-label,
+#hand-bottom .player-label,
+#hand-left .player-label,
+#hand-right .player-label {
+    position: absolute !important;
+    z-index: 80;
+    margin: 0 !important;
+    transform: none !important;
+    white-space: nowrap;
+}
+
+/* Nord tutto in alto, Sud tutto in basso. */
+#hand-top .player-label {
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%) !important;
+}
+#hand-bottom .player-label {
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%) !important;
+}
+
+/* Est tutto a destra, Ovest tutto a sinistra; scritta verticale. */
+#hand-left .player-label,
+#hand-right .player-label {
+    top: 50%;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    white-space: normal;
+    line-height: 1.05;
+    max-height: 150px;
+    padding: 7px 5px;
+}
+#hand-left .player-label {
+    left: 2px;
+    transform: translateY(-50%) rotate(180deg) !important;
+}
+#hand-right .player-label {
+    right: 2px;
+    transform: translateY(-50%) !important;
+}
+
+/* Le mani scoperte laterali restano centrate, lasciando libero il bordo per il nome. */
+#hand-left:has(#cards-left.exposed-vertical-hand),
+#hand-right:has(#cards-right.exposed-vertical-hand) {
+    position: relative;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+#hand-left:has(#cards-left.exposed-vertical-hand) .cards-container,
+#hand-right:has(#cards-right.exposed-vertical-hand) .cards-container {
+    order: initial !important;
+    width: calc(100% - 28px) !important;
+    margin: 0 auto;
+}
+#hand-left:has(#cards-left.exposed-vertical-hand) .player-label,
+#hand-right:has(#cards-right.exposed-vertical-hand) .player-label {
+    order: initial !important;
+}
+
+/* V12 - Posizionamento definitivo delle etichette dei giocatori agli angoli.
+   L'orientamento verticale di Est/Ovest rimane invariato. */
+#hand-top .player-label {
+    position: absolute !important;
+    top: 2px !important;
+    left: 2px !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+}
+
+#hand-bottom .player-label {
+    position: absolute !important;
+    right: 2px !important;
+    bottom: 2px !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+}
+
+#hand-left .player-label {
+    position: absolute !important;
+    left: 2px !important;
+    bottom: 2px !important;
+    right: auto !important;
+    top: auto !important;
+    writing-mode: vertical-rl !important;
+    text-orientation: mixed !important;
+    transform: rotate(180deg) !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+}
+
+#hand-right .player-label {
+    position: absolute !important;
+    right: 2px !important;
+    top: 2px !important;
+    left: auto !important;
+    bottom: auto !important;
+    writing-mode: vertical-rl !important;
+    text-orientation: mixed !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+}
+
+/* V13 - Etichette cardinali sul bordo della superficie porpora, mai sopra le carte. */
+.center-panel { position: relative; }
+.table-grid { position: static !important; }
+#hand-top, #hand-bottom, #hand-left, #hand-right { position: static !important; }
+
+#hand-top .player-label,
+#hand-bottom .player-label,
+#hand-left .player-label,
+#hand-right .player-label {
+    position: absolute !important;
+    z-index: 120 !important;
+    margin: 0 !important;
+    white-space: nowrap;
+}
+
+/* Nord: angolo superiore sinistro del tavolo porpora. */
+#hand-top .player-label {
+    top: 6px !important;
+    left: 8px !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+}
+
+/* Sud: angolo inferiore destro del tavolo porpora. */
+#hand-bottom .player-label {
+    top: auto !important;
+    left: auto !important;
+    right: 8px !important;
+    bottom: 6px !important;
+    transform: none !important;
+}
+
+/* Ovest: angolo inferiore sinistro, testo verticale. */
+#hand-left .player-label {
+    top: auto !important;
+    left: 6px !important;
+    right: auto !important;
+    bottom: 8px !important;
+    writing-mode: vertical-rl !important;
+    text-orientation: mixed !important;
+    transform: rotate(180deg) !important;
+    transform-origin: center center !important;
+}
+
+/* Est: angolo superiore destro, testo verticale. */
+#hand-right .player-label {
+    top: 8px !important;
+    left: auto !important;
+    right: 6px !important;
+    bottom: auto !important;
+    writing-mode: vertical-rl !important;
+    text-orientation: mixed !important;
+    transform: none !important;
+    transform-origin: center center !important;
+}
+
+/* Branding */
+.by-ata { font-size: .42em; font-weight: 600; color: #d8f3dc; white-space: nowrap; vertical-align: middle; }

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Inserisci Nick Name</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<div class="nickname-access-page">
+  <div class="access-card">
+    <h1>Inserisci Nick Name</h1>
+    <p>Inserisci il tuo Nick Name per accedere a Insegnare Bridge e ai tornei.</p>
+    <input id="nickname" type="text" maxlength="20" autocomplete="off" placeholder="Scrivi il tuo Nick Name">
+    <button class="panel-btn" onclick="enter()">Entra</button>
+    <a class="back-link" href="index.html">Torna alla pagina iniziale</a>
+  </div>
+</div>
+<script>
+function enter(){
+  const nick=document.getElementById('nickname').value.trim();
+  if(!nick) return;
+  window.location.href='access.html?nick='+encodeURIComponent(nick);
+}
+document.getElementById('nickname').addEventListener('keydown',e=>{if(e.key==='Enter')enter()});
+</script>
+</body></html>

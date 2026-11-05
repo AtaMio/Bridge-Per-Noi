@@ -1,0 +1,94 @@
+function checkRobotTurn() {
+    if (gameState.isProcessingTrick) return;
+
+    if (gameState.mode === 'solo') {
+        if (!gameState.biddingEnded) {
+            if (gameState.currentBidder !== 2) {
+                scheduleRobotMove(robotBidStep, 650);
+            }
+        } else {
+            let turnPlayer = PLAYERS[gameState.currentTurn];
+            if (!isHumanTurn(turnPlayer)) {
+                scheduleRobotMove(robotPlayStep, 800);
+            }
+        }
+    }
+}
+
+function robotBidStep() {
+    if (gameState.biddingEnded || gameState.isProcessingTrick) return;
+
+    let bidder = gameState.currentBidder;
+    let validBids = [];
+
+    for (let level = 1; level <= 7; level++) {
+        STRAINS.forEach(strain => {
+            let bidStr = level + strain;
+            if (isValidBid(bidStr, bidder, gameState.bids)) {
+                validBids.push(bidStr);
+            }
+        });
+    }
+
+    let highest = getHighestBidInfo(gameState.bids);
+    let chosenBid = 'Passo';
+
+    if (!highest) {
+        if (Math.random() < 0.4) {
+            let openings = ['1♣', '1♦', '1♥', '1♠', '1NT'].filter(b => isValidBid(b, bidder, gameState.bids));
+            if (openings.length > 0) {
+                chosenBid = openings[Math.floor(Math.random() * openings.length)];
+            }
+        }
+    } else {
+        if (Math.random() < 0.25 && validBids.length > 0) {
+            let candidateCount = Math.min(2, validBids.length);
+            chosenBid = validBids[Math.floor(Math.random() * candidateCount)];
+        }
+    }
+
+    makeBid(chosenBid);
+}
+
+function robotPlayStep() {
+    if (gameState.isProcessingTrick) return;
+
+    let seat = PLAYERS[gameState.currentTurn];
+    if (isHumanTurn(seat)) return;
+
+    let hand = gameState.hands[seat];
+    if (!hand || hand.length === 0) return;
+
+    let validIndices = [];
+    if (gameState.trickLedSuit) {
+        hand.forEach((c, i) => {
+            if (c.suit === gameState.trickLedSuit) validIndices.push(i);
+        });
+    }
+
+    if (validIndices.length === 0) {
+        hand.forEach((_, i) => validIndices.push(i));
+    }
+
+    let chosenIdx = validIndices[Math.floor(Math.random() * validIndices.length)];
+    let card = hand[chosenIdx];
+    hand.splice(chosenIdx, 1);
+
+    if (!gameState.trickLedSuit) {
+        gameState.trickLedSuit = card.suit;
+    }
+    gameState.trick[seat] = card;
+    gameState.currentTurn = (gameState.currentTurn + 1) % 4;
+
+    saveMultiplayerState();
+    updateUI();
+
+    let playedCardsCount = PLAYERS.filter(p => gameState.trick[p] !== null).length;
+    if (playedCardsCount === 4) {
+        gameState.isProcessingTrick = true;
+        scheduleRobotMove(evaluateTrick, 1200);
+    } else {
+        checkRobotTurn();
+    }
+}
+

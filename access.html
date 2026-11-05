@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Bridge per Noi - Accesso</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<div class="protected-menu-page">
+  <div class="access-card">
+    <h1>Bridge per Noi</h1>
+    <p>Benvenuto <span id="nick" class="access-nick"></span></p>
+    <p>Scegli il settore al quale vuoi accedere:</p>
+    <div class="protected-menu-buttons">
+      <button class="panel-btn" onclick="go('insegnare')">Insegnare Bridge</button>
+      <button class="panel-btn" onclick="go('teams')">Tornei a squadre</button>
+      <button class="panel-btn" onclick="go('mitchel')">Tornei Mitchel</button>
+    </div>
+    <a class="back-link" href="index.html">Torna alla pagina iniziale</a>
+  </div>
+</div>
+<script>
+const nick=(new URLSearchParams(location.search).get('nick')||'').trim();
+document.getElementById('nick').textContent=nick;
+function go(section){ if(!nick) { location.href='login.html'; return; } location.href='index.html?protected='+encodeURIComponent(section)+'&nick='+encodeURIComponent(nick); }
+</script>
+</body></html>

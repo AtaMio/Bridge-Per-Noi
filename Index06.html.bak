@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridge per Noi - Pro Multiplayer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="start-panel" class="panel-overlay">
+        <h1>Bridge per Noi</h1>
+        <p>Benvenuto. Scegli la modalità di gioco:</p>
+        <button class="panel-btn" onclick="startGameSolo()">Gioca da Solo (SUD vs 3 Robot - SAYC)</button>
+        <button class="panel-btn" onclick="startAmici()">Gioca con amici</button>
+        <button class="panel-btn" onclick="startInsegnare()">Insegnare Bridge</button>
+        <button class="panel-btn" onclick="alert('Bridge per Noi - Realizzato da ATA')">BY ATA</button>
+    </div>
+
+    <div id="lobby-panel" class="panel-overlay" style="display:none;">
+        <h2 id="lobby-title">Gioca con amici</h2>
+        <p style="font-size: 14px; color:#bdc3c7;">Inserisci i dati per accedere al tavolo.</p>
+        
+        <div class="lobby-group">
+            <div class="pin-entry-row"><label for="lobby-pin">Inserisci codice a 5 numeri</label>
+            <input type="text" inputmode="numeric" id="lobby-pin" placeholder="es. 58214" maxlength="5" pattern="[0-9]{5}" autocomplete="off"></div>
+        </div>
+        
+        <div class="lobby-group">
+            <label>Il tuo Nickname</label>
+            <input type="text" id="lobby-nick" placeholder="Scrivi il nome e premi Invio" maxlength="10" autocomplete="off" onkeydown="handleNickKeyDown(event)">
+            <button class="panel-btn" style="min-width: 100%; margin: 8px 0 0 0; padding: 8px; font-size: 0.9rem;" onclick="confirmNickname()">Conferma Nickname e Scegli Posto</button>
+        </div>
+
+        <div id="seat-selection" style="display:none; margin-top: 10px;">
+            <h3>Scegli il tuo posto:</h3>
+            <div class="seat-grid">
+                <button class="seat-btn" id="seat-north" onclick="joinSeat('north')">NORD</button>
+                <button class="seat-btn" id="seat-south" onclick="joinSeat('south')">SUD</button>
+                <button class="seat-btn" id="seat-west" onclick="joinSeat('west')">OVEST</button>
+                <button class="seat-btn" id="seat-east" onclick="joinSeat('east')">EST</button>
+                <button class="seat-btn" id="btn-visitatore" onclick="joinSpectator()" style="grid-column: span 2; background-color: #8e44ad; display:none;">Entra come Visitatore</button>
+            </div>
+            <button id="btn-start-table" class="panel-btn" style="display:none; margin-top: 15px;" onclick="enterMultiplayerTable()">Entra al Tavolo</button>
+        </div>
+        
+        <button onclick="goBackToStart()" style="background:transparent; border:none; color:#bdc3c7; text-decoration:underline; cursor:pointer; margin-top:15px;">Torna Indietro</button>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <div id="status-bar">Preparazione del tavolo in corso...</div>
+        <div class="main-layout">
+            <div class="left-panel">
+                <div class="side-box board-info">
+                    <h3 id="mode-display-title">Modalità Gioco</h3>
+                    <div id="table-pin-display" style="display:none; margin-bottom:8px; color:#d8f3dc;">Codice Tavolo: <span id="table-pin-value" style="font-weight:bold; font-size:16px; color:#52b788;"></span></div>
+                    Board N°: <span id="board-num" style="font-weight:bold; font-size: 16px; color:#52b788;">1</span><br><br>
+                    Mazziere: <span id="board-dealer" style="font-weight:bold;">Nord</span><br><br>
+                    <div id="score-tracker" style="display:none; color: #1a4224; background: #fff; padding: 8px; border-radius: 6px; font-size: 0.88rem;">
+                        Prese N/S: <strong id="tricks-ns" style="font-size: 16px; color: #27ae60;">0</strong><br>
+                        Prese E/O: <strong id="tricks-ew" style="font-size: 16px; color: #c0392b;">0</strong>
+                    </div>
+                </div>
+                <div class="side-box action-buttons-vertical">
+                    <h3>Comandi</h3>
+                    <button onclick="nextBoard()" class="btn-primary" id="btn-next">Prossima Smazzata</button>
+                    <button onclick="toggleResultsModal(true)" class="btn-info">Guarda lo Score</button>
+                    <button onclick="toggleRevealCards()" class="btn-warning" id="btn-reveal">Rivela Carte</button>
+                    <button onclick="openPreparedHandsFilePicker()" class="btn-primary" id="btn-load-prepared-file">📄 Carica file mani_preparate.txt</button>
+                    <div id="prepared-hands-status" style="display:none; margin-top:6px; font-size:0.78rem; color:#d8f3dc; line-height:1.35;"></div>
+                    <input id="prepared-hands-file-input" type="file" accept=".txt,.bridge,text/plain" style="display:none;" onchange="handlePreparedHandsSingleFile(event)">
+                    <button onclick="quitToLobby()" class="btn-danger">Abbandona Tavolo</button>
+                </div>
+                <div class="side-box" id="last-hand-box" style="display:none;">
+                    <h3>Score & Carte Giocate</h3>
+                    <div id="last-hand-score" style="margin-bottom: 8px; font-size: 0.85rem; line-height: 1.4; background: #081c15; padding: 8px; border-radius: 6px; border: 1px solid #2d6a4f;"></div>
+                    <div id="last-hand-cards" style="font-size: 0.8rem; background: #081c15; padding: 8px; border-radius: 6px; border: 1px solid #2d6a4f; max-height: 280px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <div class="center-panel">
+                <div class="table-grid">
+                    <div class="hand" id="hand-top">
+                        <div class="player-label" id="label-top"><span id="title-top"></span> <span id="name-top"></span><span id="mic-top"></span></div>
+                        <div id="cards-top" class="cards-container"></div>
+                    </div>
+                    <div class="hand" id="hand-left">
+                        <div class="player-label" id="label-left"><span id="title-left"></span> <span id="name-left"></span><span id="mic-left"></span></div>
+                        <div id="cards-left" class="cards-container vertical-stack"></div>
+                    </div>
+                    <div class="center-area">
+                        <div class="center-logo">♠ ♥ ♦ ♣</div>
+                        <div class="trick-area" id="trick-area" style="display: none;">
+                            <div id="trick-top" class="trick-card-slot"></div>
+                            <div id="trick-left" class="trick-card-slot"></div>
+                            <div id="trick-right" class="trick-card-slot"></div>
+                            <div id="trick-bottom" class="trick-card-slot"></div>
+                        </div>
+                    </div>
+                    <div class="hand" id="hand-right">
+                        <div class="player-label" id="label-right"><span id="title-right"></span> <span id="name-right"></span><span id="mic-right"></span></div>
+                        <div id="cards-right" class="cards-container vertical-stack"></div>
+                    </div>
+                    <div class="hand" id="hand-bottom">
+                        <div class="player-label" id="label-bottom"><span id="title-bottom"></span> <span id="name-bottom"></span><span id="mic-bottom"></span></div>
+                        <div id="cards-bottom" class="cards-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="side-box">
+                    <h3>Quadro Licite</h3>
+                    <div id="history-grid" class="history-grid"></div>
+                </div>
+                <div class="side-box" id="bidding-panel">
+                    <h3>Fai un'Offerta</h3>
+                    <div id="bidding-turn-indicator" style="font-weight:bold; margin-bottom:6px; font-size:0.85rem; text-align:center;"></div>
+                    <div id="bidding-box"></div>
+                    <div class="special-bids-grid">
+                        <button class="special-btn btn-pass-stylish" onclick="userPass()">PASSO</button>
+                        <button class="special-btn btn-double" onclick="userSpecialBid('X')">X (Db)</button>
+                        <button class="special-btn btn-redouble" onclick="userSpecialBid('XX')">XX (Rdb)</button>
+                        <button class="special-btn btn-alert" onclick="toggleAlert()">ALLERT</button>
+                        <button class="special-btn btn-undo-bid" onclick="undoLastBid()">ANNULLA ULTIMA LICITA</button>
+                    </div>
+                </div>
+                <!-- Box Visitatori posizionato sotto la Bidding Box -->
+                <div class="side-box" id="visitor-panel" style="display:none;">
+                    <h3>Visitatori / Spettatori</h3>
+                    <div id="visitor-list" style="font-size: 0.85rem; color: #d8f3dc; line-height: 1.5; font-weight: bold;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="results-modal">
+        <div class="results-content">
+            <h2>Score del Torneo</h2>
+            <table class="results-table">
+                <thead>
+                    <tr><th>Brd</th><th>Contratto</th><th>Gioc.</th><th>Prese N/S</th><th>Prese E/O</th></tr>
+                </thead>
+                <tbody id="results-tbody"></tbody>
+            </table>
+            <button class="close-results" onclick="toggleResultsModal(false)">Torna al Tavolo</button>
+        </div>
+    </div>
+
+    <script src="js/state.js"></script>
+    <script src="js/prepared_hands.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/multiplayer.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/bridge.js"></script>
+    <script src="js/robots.js"></script>
+    <script src="js/results.js"></script>
+</body>
+</html>

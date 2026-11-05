@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridge per Noi - Pro Multiplayer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="start-panel" class="panel-overlay">
+        <h1>Bridge per Noi</h1>
+        <p>Benvenuto. Scegli la modalità di gioco:</p>
+        <button class="panel-btn" onclick="startGameSolo()">Gioca da Solo (SUD vs 3 Robot - SAYC)</button>
+        <button class="panel-btn" onclick="startAmici()">Un tavolo con amici</button>
+        <div class="protected-entry-note">Per insegnare bridge e tornei inserisci il tuo Nick name</div>
+        <button class="panel-btn protected-entry-btn" onclick="openNicknameAccess()">Inserisci Nick name</button>
+    </div>
+
+    <div id="tournaments-page" class="tournaments-page" style="display:none;">
+        <div class="tournaments-shell">
+            <h1>Tornei</h1>
+            <div id="tournament-home-actions" class="tournament-actions">
+                <button class="panel-btn tournament-main-btn" onclick="selectTeamTournament()">Tornei a squadre</button>
+                <button class="panel-btn tournament-main-btn" onclick="selectMitchelTournament()">Tornei Mitchel</button>
+            </div>
+            <div id="tournament-team-panel" style="display:none;">
+                <div id="tournament-role-choice" class="tournament-role-choice">
+                    <button class="panel-btn" onclick="chooseTournamentManager()">Gestore torneo</button>
+                    <button class="panel-btn" onclick="chooseTournamentPlayer()">Giocatore</button>
+                </div>
+                <div id="team-manager-form" class="tournament-form" style="display:none;">
+                    <h2>Gestore torneo</h2>
+                    <label>Nome del creatore del torneo</label>
+                    <input id="manager-name" type="text" maxlength="30" placeholder="Nome del gestore">
+                    <div class="referee-line"><span>Arbitro</span><label><input type="radio" name="manager-referee" value="yes" checked> Sì</label><label><input type="radio" name="manager-referee" value="no"> No</label></div>
+                    <label>Codice torneo a 5 numeri</label>
+                    <input id="manager-tournament-code" type="text" inputmode="numeric" maxlength="5" placeholder="es. 58214">
+                    <label>Numero di squadre iscritte</label>
+                    <input id="manager-team-count" type="number" min="2" max="32" value="2">
+                    <label>Numero di mani della partita</label>
+                    <input id="manager-board-count" type="number" min="4" max="36" value="8">
+                    <small class="tournament-help">Numero di board della partita (4–36), utilizzato per il calcolo IMP e VP.</small>
+                    <label>Tipo di torneo</label>
+                    <select id="manager-tournament-type" onchange="updateTournamentTypeFields()">
+                        <option value="italiana">Movimento all'Italiana</option>
+                        <option value="danese">Movimento Danese</option>
+                    </select>
+                    <div id="danish-rounds-wrap" style="display:none;">
+                        <label>Numero di turni</label>
+                        <input id="manager-round-count" type="number" min="1" max="31" value="3">
+                        <small class="tournament-help">Nel Movimento Danese le coppie vengono ricalcolate a ogni turno in base ai VP totali, evitando le ripetizioni fino a quando è possibile.</small>
+                    </div>
+                    <button class="panel-btn" onclick="createTeamTournament()">Crea torneo</button>
+                </div>
+                <div id="team-player-form" class="tournament-form" style="display:none;">
+                    <h2>Giocatore</h2>
+                    <label>Codice del torneo</label>
+                    <input id="player-tournament-code" type="text" inputmode="numeric" maxlength="5" placeholder="Inserisci codice a 5 numeri">
+                    <button class="panel-btn compact-btn" onclick="loadTournamentForPlayer()">Carica torneo</button>
+                    <div id="player-registration-fields" style="display:none;">
+                        <label>Squadra</label><select id="player-team-select" onchange="renderTournamentPlayersForSelectedTeam();updateTournamentSeatOptions();"></select>
+                        <label>Nome squadra (max 8 caratteri)</label><input id="player-team-name" type="text" maxlength="8" placeholder="Nome squadra">
+                        <label>Nickname del giocatore</label><input id="player-nick" type="text" maxlength="20" placeholder="Nickname">
+                        <label>Sala</label><select id="player-room" onchange="updateTournamentSeatOptions()"><option value="open">Sala aperta</option><option value="closed">Sala chiusa</option></select>
+                        <label>Punto cardinale</label><div id="player-seat-buttons" class="t-seat-buttons"></div>
+                        <input id="selected-player-seat" type="hidden">
+                        <button class="panel-btn" onclick="registerTournamentPlayer()">Registra giocatore</button>
+                        <div id="tournament-player-status" class="tournament-status"></div>
+                        <div id="tournament-team-players" class="tournament-team-players"></div>
+                    </div>
+                </div>
+                <div id="tournament-match-panel" class="tournament-match-panel tournament-hidden">
+                    <h2 id="tournament-match-title">Torneo a squadre</h2>
+                    <div id="tournament-match-summary"></div>
+                    <div id="tournament-round-controls" class="tournament-round-controls"></div>
+                    <div id="tournament-pairings" class="tournament-pairings"></div>
+                    <div id="tournament-score-editor" class="tournament-score-entry tournament-hidden"></div>
+                    <div id="tournament-round-results" class="tournament-round-results tournament-hidden"></div>
+                    <div id="tournament-standings" class="tournament-standings"></div>
+                </div>
+            </div>
+
+            <div id="tournament-mitchel-panel" style="display:none;">
+                <div id="mitchel-role-choice" class="tournament-role-choice">
+                    <button class="panel-btn" onclick="chooseMitchelManager()">Direttore torneo</button>
+                    <button class="panel-btn" onclick="chooseMitchelPlayer()">Coppia</button>
+                </div>
+                <div id="mitchel-manager-form" class="tournament-form" style="display:none;">
+                    <h2>Direttore torneo</h2>
+                    <label>Nome del direttore / creatore del torneo</label>
+                    <input id="mitchel-manager-name" type="text" maxlength="30" placeholder="Nome del direttore">
+                    <div class="referee-line"><span>Arbitro</span><label><input type="radio" name="mitchel-referee" value="yes" checked> Sì</label><label><input type="radio" name="mitchel-referee" value="no"> No</label></div>
+                    <label>Codice torneo a 5 numeri</label>
+                    <input id="mitchel-code" type="text" inputmode="numeric" maxlength="5" placeholder="es. 58214">
+                    <label>Numero di mani per turno</label>
+                    <input id="mitchel-boards" type="number" min="2" max="36" value="4">
+                    <small class="tournament-help">Nello stesso turno tutte le coppie attive giocano gli stessi board.</small>
+                    <p class="tournament-help">Il numero delle coppie non viene fissato prima: il direttore chiude le iscrizioni e avvia il torneo quando lo desidera.</p>
+                    <button class="panel-btn" onclick="createMitchelTournament()">Crea torneo</button>
+                    <button class="panel-btn compact-btn" onclick="startMitchelTournamentFromManager()">Dai il via al torneo / chiudi iscrizioni</button>
+                </div>
+                <div id="mitchel-player-form" class="tournament-form" style="display:none;">
+                    <h2>Coppia</h2>
+                    <label>Codice del torneo</label>
+                    <input id="mitchel-player-code" type="text" inputmode="numeric" maxlength="5" placeholder="Inserisci codice a 5 numeri">
+                    <button class="panel-btn compact-btn" onclick="loadMitchelTournamentForPair()">Carica torneo</button>
+                    <div id="mitchel-registration-fields" style="display:none;">
+                        <label>Nome della coppia (max 8 caratteri)</label>
+                        <input id="mitchel-pair-name" type="text" maxlength="8" placeholder="Nome coppia">
+                        <label>Nickname giocatore 1</label>
+                        <input id="mitchel-p1" type="text" maxlength="20" placeholder="Giocatore 1">
+                        <label>Nickname giocatore 2</label>
+                        <input id="mitchel-p2" type="text" maxlength="20" placeholder="Giocatore 2">
+                        <button class="panel-btn" onclick="registerMitchelPair()">Iscrivi la coppia</button>
+                        <div id="mitchel-player-status" class="tournament-status"></div>
+                        <div id="mitchel-pairs-list" class="tournament-team-players"></div>
+                    </div>
+                </div>
+                <div id="mitchel-match-panel" class="tournament-match-panel tournament-hidden">
+                    <h2 id="mitchel-match-title">Torneo Mitchel</h2>
+                    <div id="mitchel-match-summary"></div>
+                    <div id="mitchel-round-controls" class="tournament-round-controls"></div>
+                    <div id="mitchel-pairings" class="tournament-pairings"></div>
+                    <div id="mitchel-score-editor" class="tournament-score-entry tournament-hidden"></div>
+                    <div id="mitchel-round-results" class="tournament-round-results tournament-hidden"></div>
+                    <div id="mitchel-standings" class="tournament-standings"></div>
+                </div>
+            </div>
+
+            <button class="tournament-back-btn" onclick="backFromTournaments()">Torna alla pagina iniziale</button>
+        </div>
+    </div>
+
+    <div id="lobby-panel" class="panel-overlay" style="display:none;">
+        <h2 id="lobby-title">Gioca con amici</h2>
+        <p style="font-size: 14px; color:#bdc3c7;">Inserisci i dati per accedere al tavolo.</p>
+        
+        <div class="lobby-group">
+            <div class="pin-entry-row"><label for="lobby-pin">Inserisci codice a 5 numeri</label>
+            <input type="text" inputmode="numeric" id="lobby-pin" placeholder="es. 58214" maxlength="5" pattern="[0-9]{5}" autocomplete="off"></div>
+        </div>
+        
+        <div class="lobby-group">
+            <label>Il tuo Nickname</label>
+            <input type="text" id="lobby-nick" placeholder="Scrivi il nome e premi Invio" maxlength="10" autocomplete="off" onkeydown="handleNickKeyDown(event)">
+            <button class="panel-btn" style="min-width: 100%; margin: 8px 0 0 0; padding: 8px; font-size: 0.9rem;" onclick="confirmNickname()">Conferma Nickname e Scegli Posto</button>
+        </div>
+
+        <div id="seat-selection" style="display:none; margin-top: 10px;">
+            <h3>Scegli il tuo posto:</h3>
+            <div class="seat-grid">
+                <button class="seat-btn" id="seat-north" onclick="joinSeat('north')">NORD</button>
+                <button class="seat-btn" id="seat-south" onclick="joinSeat('south')">SUD</button>
+                <button class="seat-btn" id="seat-west" onclick="joinSeat('west')">OVEST</button>
+                <button class="seat-btn" id="seat-east" onclick="joinSeat('east')">EST</button>
+                <button class="seat-btn" id="btn-visitatore" onclick="joinSpectator()" style="grid-column: span 2; background-color: #8e44ad; display:none;">Entra come Visitatore</button>
+            </div>
+            <button id="btn-start-table" class="panel-btn" style="display:none; margin-top: 15px;" onclick="enterMultiplayerTable()">Entra al Tavolo</button>
+        </div>
+        
+        <button onclick="goBackToStart()" style="background:transparent; border:none; color:#bdc3c7; text-decoration:underline; cursor:pointer; margin-top:15px;">Torna Indietro</button>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <div id="status-bar">Preparazione del tavolo in corso...</div>
+        <div class="main-layout">
+            <div class="left-panel">
+                <div class="side-box board-info">
+                    <h3 id="mode-display-title">Modalità Gioco</h3>
+                    <div id="table-pin-display" style="display:none; margin-bottom:8px; color:#d8f3dc;">Codice Tavolo: <span id="table-pin-value" style="font-weight:bold; font-size:16px; color:#52b788;"></span></div>
+                    Board N°: <span id="board-num" style="font-weight:bold; font-size: 16px; color:#52b788;">1</span><br><br>
+                    Mazziere: <span id="board-dealer" style="font-weight:bold;">Nord</span><br><br>
+                    <div id="score-tracker" style="display:none; color: #1a4224; background: #fff; padding: 8px; border-radius: 6px; font-size: 0.88rem;">
+                        Prese N/S: <strong id="tricks-ns" style="font-size: 16px; color: #27ae60;">0</strong><br>
+                        Prese E/O: <strong id="tricks-ew" style="font-size: 16px; color: #c0392b;">0</strong>
+                    </div>
+                </div>
+                <div class="side-box action-buttons-vertical">
+                    <h3>Comandi</h3>
+                    <button onclick="nextBoard()" class="btn-primary" id="btn-next">Prossima Smazzata</button>
+                    <button onclick="toggleResultsModal(true)" class="btn-info">Guarda lo Score</button>
+                    <button onclick="toggleRevealCards()" class="btn-warning" id="btn-reveal">Rivela Carte</button>
+                    <button onclick="openPreparedHandsFilePicker()" class="btn-primary" id="btn-load-prepared-file">📄 Carica file mani_preparate.txt</button>
+                    <div id="prepared-hands-status" style="display:none; margin-top:6px; font-size:0.78rem; color:#d8f3dc; line-height:1.35;"></div>
+                    <input id="prepared-hands-file-input" type="file" accept=".txt,.bridge,text/plain" style="display:none;" onchange="handlePreparedHandsSingleFile(event)">
+                    <button onclick="quitToLobby()" class="btn-danger">Abbandona Tavolo</button>
+                </div>
+                <div class="side-box" id="last-hand-box" style="display:none;">
+                    <h3>Score & Carte Giocate</h3>
+                    <div id="last-hand-score" style="margin-bottom: 8px; font-size: 0.85rem; line-height: 1.4; background: #081c15; padding: 8px; border-radius: 6px; border: 1px solid #2d6a4f;"></div>
+                    <div id="last-hand-cards" style="font-size: 0.8rem; background: #081c15; padding: 8px; border-radius: 6px; border: 1px solid #2d6a4f; max-height: 280px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <div class="center-panel">
+                <div class="table-grid">
+                    <div class="hand" id="hand-top">
+                        <div class="player-label" id="label-top"><span id="title-top"></span> <span id="name-top"></span><span id="mic-top"></span></div>
+                        <div id="cards-top" class="cards-container"></div>
+                    </div>
+                    <div class="hand" id="hand-left">
+                        <div class="player-label" id="label-left"><span id="title-left"></span> <span id="name-left"></span><span id="mic-left"></span></div>
+                        <div id="cards-left" class="cards-container vertical-stack"></div>
+                    </div>
+                    <div class="center-area">
+                        <div class="center-logo">♠ ♥ ♦ ♣</div>
+                        <div class="trick-area" id="trick-area" style="display: none;">
+                            <div id="trick-top" class="trick-card-slot"></div>
+                            <div id="trick-left" class="trick-card-slot"></div>
+                            <div id="trick-right" class="trick-card-slot"></div>
+                            <div id="trick-bottom" class="trick-card-slot"></div>
+                        </div>
+                    </div>
+                    <div class="hand" id="hand-right">
+                        <div class="player-label" id="label-right"><span id="title-right"></span> <span id="name-right"></span><span id="mic-right"></span></div>
+                        <div id="cards-right" class="cards-container vertical-stack"></div>
+                    </div>
+                    <div class="hand" id="hand-bottom">
+                        <div class="player-label" id="label-bottom"><span id="title-bottom"></span> <span id="name-bottom"></span><span id="mic-bottom"></span></div>
+                        <div id="cards-bottom" class="cards-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="side-box">
+                    <h3>Quadro Licite</h3>
+                    <div id="history-grid" class="history-grid"></div>
+                </div>
+                <div class="side-box" id="bidding-panel">
+                    <h3>Fai un'Offerta</h3>
+                    <div id="bidding-turn-indicator" style="font-weight:bold; margin-bottom:6px; font-size:0.85rem; text-align:center;"></div>
+                    <div id="bidding-box"></div>
+                    <div class="special-bids-grid">
+                        <button class="special-btn btn-pass-stylish" onclick="userPass()">PASSO</button>
+                        <button class="special-btn btn-double" onclick="userSpecialBid('X')">X (Db)</button>
+                        <button class="special-btn btn-redouble" onclick="userSpecialBid('XX')">XX (Rdb)</button>
+                        <button class="special-btn btn-alert" onclick="toggleAlert()">ALLERT</button>
+                        <button class="special-btn btn-undo-bid" onclick="undoLastBid()">ANNULLA ULTIMA LICITA</button>
+                    </div>
+                </div>
+                <!-- Box Visitatori posizionato sotto la Bidding Box -->
+                <div class="side-box" id="visitor-panel" style="display:none;">
+                    <h3>Visitatori / Spettatori</h3>
+                    <div id="visitor-list" style="font-size: 0.85rem; color: #d8f3dc; line-height: 1.5; font-weight: bold;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tournament-score-modal" class="tournament-score-modal tournament-hidden">
+        <div class="tournament-score-modal-content">
+            <h2 id="tournament-score-modal-title">Score partita</h2>
+            <div id="tournament-score-modal-body"></div>
+            <button class="close-results" onclick="closeTournamentScoreModal()">Chiudi score</button>
+        </div>
+    </div>
+
+    <div id="results-modal">
+        <div class="results-content">
+            <h2>Score del Torneo</h2>
+            <table class="results-table">
+                <thead>
+                    <tr><th>Brd</th><th>Contratto</th><th>Gioc.</th><th>Prese N/S</th><th>Prese E/O</th></tr>
+                </thead>
+                <tbody id="results-tbody"></tbody>
+            </table>
+            <button class="close-results" onclick="toggleResultsModal(false)">Torna al Tavolo</button>
+        </div>
+    </div>
+
+    <script src="js/state.js"></script>
+    <script src="js/prepared_hands.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/multiplayer.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/bridge.js"></script>
+    <script src="js/robots.js"></script>
+    <script src="js/results.js"></script>
+    <script src="js/tournaments.js"></script>
+    <script>
+    // Ingresso alle sezioni protette: il nickname arriva dalla pagina di accesso.
+    function getAuthenticatedNick(){
+        try { return (new URLSearchParams(window.location.search).get('nick') || '').trim(); } catch(e) { return ''; }
+    }
+    function openNicknameAccess(){
+        window.location.href = 'login.html';
+    }
+    function enterProtectedSection(section){
+        const nick = getAuthenticatedNick();
+        if(!nick){ window.location.href='login.html'; return; }
+        if(section==='insegnare'){
+            startInsegnare();
+            const n=document.getElementById('lobby-nick'); if(n) n.value=nick;
+        } else if(section==='teams'){
+            showTournamentsPage();
+            selectTeamTournament();
+            const n=document.getElementById('manager-name'); if(n) n.value=nick;
+            const p=document.getElementById('player-nick'); if(p) p.value=nick;
+        } else if(section==='mitchel'){
+            showTournamentsPage();
+            selectMitchelTournament();
+            const n=document.getElementById('mitchel-manager-name'); if(n) n.value=nick;
+            const p=document.getElementById('mitchel-p1'); if(p) p.value=nick;
+        }
+    }
+    (function(){
+        const section = new URLSearchParams(window.location.search).get('protected');
+        if(section) setTimeout(()=>enterProtectedSection(section), 0);
+    })();
+    </script>
+</body>
+</html>
