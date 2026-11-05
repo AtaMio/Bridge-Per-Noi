@@ -1,3 +1,13 @@
+/* Modulo Multiplayer & WebRTC Voice Chat per Bridge per Noi */
+
+let peerConnections = {};
+const rtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
 function syncTableState() {
     if (!gameState.tablePin) return;
     const storageKey = `bridge_table_${gameState.tablePin}`;
@@ -42,6 +52,10 @@ function syncTableState() {
     if (btnVisitatore) {
         btnVisitatore.style.display = (occupiedCount === 4 || gameState.mode === 'insegnare' || gameState.mode === 'amici') ? 'block' : 'none';
     }
+
+    if (document.getElementById('game-container').style.display !== 'none') {
+        updateUI();
+    }
 }
 
 function saveMultiplayerState() {
@@ -79,6 +93,11 @@ function syncMultiplayerState() {
     if (!tableData) return;
 
     let updated = false;
+
+    if (tableData.seats && JSON.stringify(tableData.seats) !== JSON.stringify(gameState.playersNames)) {
+        gameState.playersNames = tableData.seats;
+        updated = true;
+    }
 
     if (tableData.spectators && JSON.stringify(tableData.spectators) !== JSON.stringify(gameState.spectators)) {
         gameState.spectators = tableData.spectators;
@@ -119,6 +138,7 @@ function syncMultiplayerState() {
     }
 
     if (updated) {
+        syncTableState();
         updateUI();
     }
 }
@@ -208,6 +228,7 @@ function enterMultiplayerTable() {
     updatePreparedHandsCommandVisibility();
     updatePreparedHandsStatus();
     initNewBoard();
+    initWebRTCSignaling();
 }
 
 function quitToLobby() {
@@ -233,7 +254,6 @@ function quitToLobby() {
             const allSeatsEmpty = tableData.seats &&
                 PLAYERS.every(seat => !(tableData.seats[seat] || '').trim());
             if (allSeatsEmpty) {
-                // Il codice torna disponibile sul browser quando tutti i posti sono liberi.
                 localStorage.removeItem(storageKey);
             } else {
                 localStorage.setItem(storageKey, JSON.stringify(tableData));
@@ -241,13 +261,21 @@ function quitToLobby() {
         }
     }
 
+    stopMicrophoneStream();
+
+    document.getElementById('game-container').style.display = 'none';
+    document.getElementById('start-panel').style.display = 'flex';
+}
+
+function stopMicrophoneStream() {
     if (gameState.localAudioStream) {
         gameState.localAudioStream.getTracks().forEach(track => track.stop());
         gameState.localAudioStream = null;
     }
-
-    document.getElementById('game-container').style.display = 'none';
-    document.getElementById('start-panel').style.display = 'flex';
+    Object.keys(peerConnections).forEach(key => {
+        try { peerConnections[key].close(); } catch(e){}
+    });
+    peerConnections = {};
 }
 
 async function toggleMicrophone(seat) {
@@ -260,15 +288,13 @@ async function toggleMicrophone(seat) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             gameState.localAudioStream = stream;
             gameState.micStates[seat] = true;
+            connectAudioToPeers();
         } catch (err) {
             alert("Impossibile accedere al microfono: " + err.message);
             return;
         }
     } else {
-        if (gameState.localAudioStream) {
-            gameState.localAudioStream.getTracks().forEach(track => track.stop());
-            gameState.localAudioStream = null;
-        }
+        stopMicrophoneStream();
         gameState.micStates[seat] = false;
     }
 
@@ -287,15 +313,13 @@ async function toggleVisitorMicrophone(nick) {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             gameState.localAudioStream = stream;
             gameState.spectatorMicStates[nick] = true;
+            connectAudioToPeers();
         } catch (err) {
             alert("Impossibile accedere al microfono: " + err.message);
             return;
         }
     } else {
-        if (gameState.localAudioStream) {
-            gameState.localAudioStream.getTracks().forEach(track => track.stop());
-            gameState.localAudioStream = null;
-        }
+        stopMicrophoneStream();
         gameState.spectatorMicStates[nick] = false;
     }
 
@@ -303,3 +327,110 @@ async function toggleVisitorMicrophone(nick) {
     updateUI();
 }
 
+/* Inizializzazione della segnalazione WebRTC su Firebase Realtime Database */
+function initWebRTCSignaling() {
+    if (!gameState.tablePin || !window.bridgeFirebaseDatabase) return;
+    const pin = gameState.tablePin;
+    const myNick = document.getElementById('lobby-nick').value.trim() || 'Giocatore';
+    const signalingRef = window.bridgeFirebaseDatabase.ref(`bridgeTablesSignals/${pin}/${encodeURIComponent(myNick)}`);
+
+    signalingRef.on('child_added', snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        handleSignal(data);
+        snapshot.ref.remove();
+    });
+}
+
+function connectAudioToPeers() {
+    if (!gameState.localAudioStream || !gameState.tablePin) return;
+    const myNick = document.getElementById('lobby-nick').value.trim() || 'Giocatore';
+    
+    // Connetti verso gli altri giocatori e visitatori al tavolo
+    const allPeers = [...Object.values(gameState.playersNames), ...(gameState.spectators || [])].filter(n => n && n !== myNick);
+    allPeers.forEach(peerNick => {
+        createPeerOffer(peerNick);
+    });
+}
+
+async function createPeerOffer(peerNick) {
+    const myNick = document.getElementById('lobby-nick').value.trim() || 'Giocatore';
+    const pc = new RTCPeerConnection(rtcConfig);
+    peerConnections[peerNick] = pc;
+
+    if (gameState.localAudioStream) {
+        gameState.localAudioStream.getTracks().forEach(track => pc.addTrack(track, gameState.localAudioStream));
+    }
+
+    pc.ontrack = event => {
+        playRemoteAudioTrack(peerNick, event.streams[0]);
+    };
+
+    pc.onicecandidate = event => {
+        if (event.candidate) {
+            sendSignal(peerNick, { type: 'candidate', candidate: event.candidate, from: myNick });
+        }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sendSignal(peerNick, { type: 'offer', offer, from: myNick });
+}
+
+async function handleSignal(data) {
+    const myNick = document.getElementById('lobby-nick').value.trim() || 'Giocatore';
+    const fromNick = data.from;
+
+    if (data.type === 'offer') {
+        const pc = new RTCPeerConnection(rtcConfig);
+        peerConnections[fromNick] = pc;
+
+        if (gameState.localAudioStream) {
+            gameState.localAudioStream.getTracks().forEach(track => pc.addTrack(track, gameState.localAudioStream));
+        }
+
+        pc.ontrack = event => {
+            playRemoteAudioTrack(fromNick, event.streams[0]);
+        };
+
+        pc.onicecandidate = event => {
+            if (event.candidate) {
+                sendSignal(fromNick, { type: 'candidate', candidate: event.candidate, from: myNick });
+            }
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        sendSignal(fromNick, { type: 'answer', answer, from: myNick });
+
+    } else if (data.type === 'answer') {
+        const pc = peerConnections[fromNick];
+        if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+    } else if (data.type === 'candidate') {
+        const pc = peerConnections[fromNick];
+        if (pc) {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+    }
+}
+
+function sendSignal(toNick, signalData) {
+    if (!gameState.tablePin || !window.bridgeFirebaseDatabase) return;
+    const pin = gameState.tablePin;
+    const targetRef = window.bridgeFirebaseDatabase.ref(`bridgeTablesSignals/${pin}/${encodeURIComponent(toNick)}`);
+    targetRef.push(signalData);
+}
+
+function playRemoteAudioTrack(peerNick, stream) {
+    let audioElement = document.getElementById(`audio-peer-${peerNick}`);
+    if (!audioElement) {
+        audioElement = document.createElement('audio');
+        audioElement.id = `audio-peer-${peerNick}`;
+        audioElement.autoplay = true;
+        document.body.appendChild(audioElement);
+    }
+    audioElement.srcObject = stream;
+}
