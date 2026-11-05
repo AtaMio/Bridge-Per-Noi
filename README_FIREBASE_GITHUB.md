@@ -1,17 +1,19 @@
-# Bridge per Noi By ATA – Firebase/GitHub (integrazione iniziale)
+# Bridge per Noi By ATA – prova Firebase
 
-## Contenuto
-- Firebase Realtime Database collegato al progetto `bridge-per-noi-71d08`.
-- Adapter `js/firebase-sync.js`: sincronizza i record `bridge_table_*` dal localStorage al nodo Firebase `bridgeTables` e ascolta aggiornamenti remoti.
-- La pagina iniziale mantiene le due modalità richieste e il titolo By ATA.
+## Pubblicazione
+Caricare il contenuto di questa cartella nel repository GitHub Pages, mantenendo le cartelle `css/` e `js/` e il file `index.html` nella radice pubblicata.
 
-## Pubblicazione GitHub Pages
-1. Estrai lo ZIP.
-2. Carica nel repository GitHub tutti i file e le cartelle contenuti in `Bridge_per_Noi_v10-04` (non la cartella ZIP stessa).
-3. Repository → Settings → Pages → Deploy from a branch → `main` / root → Save.
-4. Apri l'URL Pages in HTTPS; Firebase non funziona correttamente su `file://`.
+## Configurazione
+`js/firebase-config.js` contiene la configurazione Web del progetto Firebase `bridge-per-noi-71d08` e il suo URL Realtime Database.
 
-## ATTENZIONE – prima del test con amici
-Le regole Firebase attualmente in modalità test permettono a chiunque di leggere/scrivere fino alla data indicata. Non pubblicizzare né usare dati personali/privati in questa fase. Prima dell'uso reale occorre implementare autenticazione Firebase e regole per utente/tavolo.
+## Come provare il collegamento tra due computer
+1. Aprire il sito pubblicato in due browser/dispositivi distinti.
+2. Sul primo scegliere **Un tavolo con amici**, inserire un codice di 5 cifre e un nickname, confermare e occupare un posto.
+3. Sul secondo usare lo stesso codice, inserire un nickname e confermare: i posti già occupati dovrebbero apparire disabilitati con il nickname.
+4. Occupare un altro posto dal secondo dispositivo. Sul primo il nome dovrebbe aggiornarsi senza ricaricare la pagina.
 
-Questa è un'integrazione iniziale di sincronizzazione. Va collaudata su due browser e quattro giocatori: la sincronizzazione simultanea di azioni (aste/carte) e la gestione robusta di presenza/disconnessione richiedono ancora un passaggio di hardening. La cancellazione del tavolo al completo svuotamento dei posti dipende dalla logica attuale di uscita; non è ancora una presenza server-side affidabile in caso di chiusura improvvisa del browser.
+## Importante: sicurezza e limiti della versione di prova
+- Le regole Firebase attuali consentono lettura e scrittura pubbliche fino al 3 dicembre 2026: sono esclusivamente per test. Non pubblicare dati personali o sensibili.
+- Prima di un uso pubblico occorre aggiungere autenticazione e regole di sicurezza con validazione dei dati.
+- Questo intervento corregge il caricamento remoto del tavolo tramite codice e la sottoscrizione realtime dei dati. Non costituisce ancora una certificazione completa di tutte le azioni di gioco concorrenti: prima di invitare altri giocatori bisogna collaudare distribuzione, licite, carte giocate, uscita/riconnessione e cancellazione del tavolo su più dispositivi.
+- La cancellazione automatica quando tutti i posti sono vuoti segue il flusso di uscita del gioco; una chiusura improvvisa della scheda o una perdita di rete non equivale necessariamente a un'uscita ordinata. Per gestire anche questi casi serve una presenza server-side affidabile (ad esempio autenticazione e gestione `onDisconnect`).

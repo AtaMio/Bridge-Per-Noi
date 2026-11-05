@@ -101,10 +101,9 @@ function goBackToStart() {
     document.getElementById('start-panel').style.display = 'flex';
 }
 
-function confirmNickname() {
+async function confirmNickname() {
     const pin = document.getElementById('lobby-pin').value.trim();
     const nick = document.getElementById('lobby-nick').value.trim();
-    
     if (!/^\d{5}$/.test(pin)) {
         alert('Inserisci un codice tavolo composto da esattamente 5 numeri.');
         return;
@@ -113,9 +112,19 @@ function confirmNickname() {
         alert('Inserisci un Nickname valido prima di proseguire.');
         return;
     }
-    
-    gameState.tablePin = pin;
-    syncTableState();
-    document.getElementById('seat-selection').style.display = 'block';
+    const confirmButton = document.querySelector('#lobby-panel button[onclick="confirmNickname()"]');
+    if (confirmButton) confirmButton.disabled = true;
+    try {
+        if (typeof window.bridgeLoadTable !== 'function') throw new Error('Modulo Firebase non caricato. Ricarica il sito.');
+        await window.bridgeLoadTable(pin);
+        gameState.tablePin = pin;
+        syncTableState();
+        document.getElementById('seat-selection').style.display = 'block';
+    } catch (error) {
+        console.error(error);
+        alert('Non riesco a collegarmi al tavolo. Verifica la connessione e le regole Firebase. Dettaglio: ' + error.message);
+    } finally {
+        if (confirmButton) confirmButton.disabled = false;
+    }
 }
 
