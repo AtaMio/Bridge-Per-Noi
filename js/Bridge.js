@@ -144,7 +144,6 @@ function selectCard(seat, idx) {
     }
 
     hand.splice(idx, 1);
-    recordPlayedCard(seat, card);
     if (!gameState.trickLedSuit) {
         gameState.trickLedSuit = card.suit;
     }
@@ -153,6 +152,21 @@ function selectCard(seat, idx) {
 
     saveMultiplayerState();
     updateUI();
+
+    // FIX - la registrazione della carta NON deve mai bloccare il gioco:
+    // prima la carta va in mezzo al tavolo e viene salvata (fatto qui sopra),
+    // solo dopo si prova a registrarla. Se recordPlayedCard manca o da'
+    // errore (era il punto in cui selectCard si interrompeva a meta': carta
+    // tolta dalla mano in locale ma mai messa in mezzo ne' salvata, e dopo
+    // 1 secondo la sincronizzazione la faceva riapparire), il gioco continua
+    // comunque e l'errore finisce solo in console.
+    try {
+        if (typeof recordPlayedCard === 'function') {
+            recordPlayedCard(seat, card);
+        } else if (Array.isArray(gameState.playedCards)) {
+            gameState.playedCards.push({ seat: seat, card: card });
+        }
+    } catch (e) { console.warn('recordPlayedCard:', e); }
 
     let playedCardsCount = PLAYERS.filter(p => gameState.trick[p] !== null).length;
     if (playedCardsCount === 4) {
