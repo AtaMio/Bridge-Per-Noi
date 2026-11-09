@@ -14,11 +14,6 @@
     return typeof key === 'string' && key.startsWith('bridge_table_')
       ? key.slice('bridge_table_'.length) : null;
   }
-  // Il nodo 'voice' contiene la segnalazione WebRTC: non deve passare da localStorage né essere sovrascritto.
-  function stripVoice(v) {
-    if (v && typeof v === 'object' && 'voice' in v) { v = Object.assign({}, v); delete v.voice; }
-    return v;
-  }
   function tableRef(pin) {
     return firebase.database().ref(ROOT + '/' + encodeURIComponent(pin));
   }
@@ -28,7 +23,7 @@
     const callback = snapshot => {
       applyingRemote = true;
       try {
-        if (snapshot.exists()) originalSetItem.call(localStorage, 'bridge_table_' + pin, JSON.stringify(stripVoice(snapshot.val())));
+        if (snapshot.exists()) originalSetItem.call(localStorage, 'bridge_table_' + pin, JSON.stringify(snapshot.val()));
         else originalRemoveItem.call(localStorage, 'bridge_table_' + pin);
       } finally { applyingRemote = false; }
       if (typeof gameState !== 'undefined' && gameState.tablePin === pin) {
@@ -50,9 +45,8 @@
     const pin = tablePinFromKey(String(key));
     if (pin && !applyingRemote && window.bridgeFirebaseReady) {
       try {
-        const data = stripVoice(JSON.parse(String(value)));
-        // update() aggiorna solo i campi del gioco e lascia intatto il nodo 'voice' (set() lo cancellava, interrompendo l'audio).
-        tableRef(pin).update(data).catch(error => console.error('Salvataggio Firebase:', error));
+        const data = JSON.parse(String(value));
+        tableRef(pin).set(data).catch(error => console.error('Salvataggio Firebase:', error));
         subscribe(pin);
       } catch (error) { console.error('Dati tavolo non validi:', error); }
     }
@@ -71,7 +65,7 @@
     const snapshot = await tableRef(pin).get();
     applyingRemote = true;
     try {
-      if (snapshot.exists()) originalSetItem.call(localStorage, 'bridge_table_' + pin, JSON.stringify(stripVoice(snapshot.val())));
+      if (snapshot.exists()) originalSetItem.call(localStorage, 'bridge_table_' + pin, JSON.stringify(snapshot.val()));
       else originalRemoveItem.call(localStorage, 'bridge_table_' + pin);
     } finally { applyingRemote = false; }
     subscribe(pin);
