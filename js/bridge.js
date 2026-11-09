@@ -64,6 +64,13 @@ function selectCard(seat, idx) {
     if (!gameState.biddingEnded || gameState.isProcessingTrick) return;
 
     let turnPlayer = PLAYERS[gameState.currentTurn];
+    // In multiplayer a client may play only cards belonging to its assigned seat.
+    // This prevents one browser from acting on every hand just because it is the current turn.
+    if (gameState.mode !== 'solo') {
+        const ownsSeat = gameState.mySeat === seat ||
+            (Array.isArray(gameState.mySeatsInsegnare) && gameState.mySeatsInsegnare.includes(seat));
+        if (!ownsSeat) return;
+    }
     if (seat !== turnPlayer) return;
 
     let hand = gameState.hands[seat];
