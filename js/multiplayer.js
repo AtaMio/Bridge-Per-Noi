@@ -1,3 +1,44 @@
+/* Firebase Realtime Database elimina i valori null e gli array vuoti: dopo ogni lettura
+   si ricostruisce la struttura completa, altrimenti la presa risulta "piena" dopo la prima carta. */
+function normalizeRemoteGameData(d) {
+    const toArray = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === 'object' ? Object.keys(v).sort((a,b)=>a-b).map(k => v[k]).filter(x => x != null) : []);
+    const hands = {};
+    PLAYERS.forEach(p => { hands[p] = toArray(d.hands && d.hands[p]); });
+    d.hands = hands;
+    if (d.initialHands) {
+        const ih = {};
+        PLAYERS.forEach(p => { ih[p] = toArray(d.initialHands[p]); });
+        d.initialHands = ih;
+    }
+    const trick = {};
+    PLAYERS.forEach(p => { trick[p] = (d.trick && d.trick[p]) ? d.trick[p] : null; });
+    d.trick = trick;
+    d.bids = toArray(d.bids);
+    d.playedCards = toArray(d.playedCards);
+    d.trickHistory = toArray(d.trickHistory).map(t => {
+        const cards = {};
+        PLAYERS.forEach(p => { cards[p] = (t.cards && t.cards[p]) ? t.cards[p] : null; });
+        return Object.assign({}, t, { cards });
+    });
+    d.tricksWon = { ns: (d.tricksWon && d.tricksWon.ns) || 0, ew: (d.tricksWon && d.tricksWon.ew) || 0 };
+    d.micStates = Object.assign({ north: false, east: false, south: false, west: false }, d.micStates || {});
+    return d;
+}
+
+/* --- MORTO (partite online "Gioca con amici") ---
+   Il morto è il compagno del dichiarante. Le sue carte diventano visibili a tutti solo dopo l'attacco
+   (prima carta giocata) e le gioca il dichiarante; il giocatore morto non muove più. */
+function getDummySeat() {
+    if (!gameState.biddingEnded || !gameState.contract || !gameState.declarer) return null;
+    return PLAYERS[(PLAYERS.indexOf(gameState.declarer) + 2) % 4];
+}
+function isDummyRevealed() {
+    if (!getDummySeat()) return false;
+    return PLAYERS.some(p => gameState.trick[p] != null) ||
+        (gameState.trickHistory && gameState.trickHistory.length > 0) ||
+        (gameState.playedCards && gameState.playedCards.length > 0);
+}
+
 function syncTableState() {
     if (!gameState.tablePin) return;
     const storageKey = `bridge_table_${gameState.tablePin}`;
@@ -108,6 +149,7 @@ function syncMultiplayerState() {
     }
 
     if (tableData.gameStarted && tableData.hands) {
+        normalizeRemoteGameData(tableData);
         gameState.bids = tableData.bids || [];
         gameState.currentBidder = tableData.currentBidder ?? gameState.currentBidder;
         gameState.biddingEnded = tableData.biddingEnded ?? false;
@@ -124,6 +166,8 @@ function syncMultiplayerState() {
         gameState.playedCards = tableData.playedCards || [];
         gameState.trumpSuit = tableData.trumpSuit ?? (gameState.contract && gameState.contract.includes('NT') ? 'NT' : gameState.contract?.slice(-1));
         gameState.declarer = tableData.declarer ?? gameState.declarer;
+        // Se la presa non è completa (es. l'avversario ha già chiuso la presa) non si resta bloccati in elaborazione.
+        if (!PLAYERS.every(p => gameState.trick[p] !== null)) gameState.isProcessingTrick = false;
         updated = true;
     }
 
@@ -267,32 +311,6 @@ function quitToLobby() {
 
     document.getElementById('game-container').style.display = 'none';
     document.getElementById('start-panel').style.display = 'flex';
-}
-
-async function toggleMicrophone(seat) {
-    if (gameState.mode !== 'amici' && gameState.mode !== 'insegnare') return;
-    if (seat !== gameState.mySeat && !gameState.mySeatsInsegnare.includes(seat)) return;
-
-    const currentState = !!gameState.micStates[seat];
-    if (!currentState) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            gameState.localAudioStream = stream;
-            gameState.micStates[seat] = true;
-        } catch (err) {
-            alert("Impossibile accedere al microfono: " + err.message);
-            return;
-        }
-    } else {
-        if (gameState.localAudioStream) {
-            gameState.localAudioStream.getTracks().forEach(track => track.stop());
-            gameState.localAudioStream = null;
-        }
-        gameState.micStates[seat] = false;
-    }
-
-    saveMultiplayerState();
-    updateUI();
 }
 
 async function toggleVisitorMicrophone(nick) {

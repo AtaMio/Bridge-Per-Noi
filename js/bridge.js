@@ -67,8 +67,15 @@ function selectCard(seat, idx) {
     // In multiplayer a client may play only cards belonging to its assigned seat.
     // This prevents one browser from acting on every hand just because it is the current turn.
     if (gameState.mode !== 'solo') {
-        const ownsSeat = gameState.mySeat === seat ||
+        let ownsSeat = gameState.mySeat === seat ||
             (Array.isArray(gameState.mySeatsInsegnare) && gameState.mySeatsInsegnare.includes(seat));
+        if (gameState.mode === 'amici') {
+            const dummy = getDummySeat();
+            if (dummy && seat === dummy) {
+                // Le carte del morto le gioca solo il dichiarante, e solo dopo l'attacco.
+                ownsSeat = gameState.mySeat === gameState.declarer && isDummyRevealed();
+            }
+        }
         if (!ownsSeat) return;
     }
     if (seat !== turnPlayer) return;
@@ -96,7 +103,7 @@ function selectCard(seat, idx) {
     saveMultiplayerState();
     updateUI();
 
-    let playedCardsCount = PLAYERS.filter(p => gameState.trick[p] !== null).length;
+    let playedCardsCount = PLAYERS.filter(p => gameState.trick[p] != null).length;
     if (playedCardsCount === 4) {
         gameState.isProcessingTrick = true;
         scheduleRobotMove(evaluateTrick, 1200);

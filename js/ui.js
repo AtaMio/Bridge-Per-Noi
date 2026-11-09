@@ -43,6 +43,10 @@ function isHumanTurn(seat) {
     } else if (gameState.mode === 'insegnare') {
         return gameState.mySeatsInsegnare.includes(seat);
     } else {
+        if (gameState.mode === 'amici') {
+            const dummy = getDummySeat();
+            if (dummy && seat === dummy) return gameState.mySeat === gameState.declarer && isDummyRevealed();
+        }
         return gameState.mySeat === seat;
     }
 }
@@ -132,6 +136,10 @@ function updateUI() {
         if (gameState.mode === 'amici' && !isMyPosition && gameState.mySeat !== 'spectator') {
             isVisible = false;
         }
+        // Il morto è scoperto per tutti dopo l'attacco.
+        if (gameState.mode === 'amici' && p === getDummySeat() && isDummyRevealed()) {
+            isVisible = true;
+        }
 
         const suitOrder = (() => {
             const strain = gameState.contract && (gameState.contract.suit || gameState.contract.strain);
@@ -193,6 +201,22 @@ function updateUI() {
             }
         }
     });
+
+    // L'area della presa deve comparire su TUTTI i client appena finisce la licita (prima lo faceva solo chi chiudeva la licita).
+    const playPhase = gameState.biddingEnded && !!gameState.contract;
+    const trickAreaEl = document.getElementById('trick-area');
+    const scoreTrackerEl = document.getElementById('score-tracker');
+    if (trickAreaEl) trickAreaEl.style.display = playPhase ? 'grid' : 'none';
+    if (scoreTrackerEl) scoreTrackerEl.style.display = playPhase ? 'block' : 'none';
+    if (playPhase) {
+        const nsEl = document.getElementById('tricks-ns'), ewEl = document.getElementById('tricks-ew');
+        if (nsEl) nsEl.innerText = gameState.tricksWon.ns;
+        if (ewEl) ewEl.innerText = gameState.tricksWon.ew;
+        const sb = document.getElementById('status-bar');
+        if (sb && gameState.mode !== 'solo' && gameState.tricksWon.ns + gameState.tricksWon.ew < 13) {
+            sb.innerText = `Contratto: ${gameState.contract} (${(gameState.declarer || '').toUpperCase()}). Tocca a ${PLAYERS[gameState.currentTurn].toUpperCase()}`;
+        }
+    }
 
     renderBiddingHistory();
     renderBiddingBox();
